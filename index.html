@@ -1,0 +1,498 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <script type="text/javascript" src="http://gc.kis.v2.scr.kaspersky-labs.com/DE7A71B6-5BBE-E747-B09D-DC936C1AABEE/main.js" charset="UTF-8"></script><script src="http://d3js.org/d3.v3.min.js"></script>
+  <script src="http://dimplejs.org/dist/dimple.v2.0.0.min.js"></script>
+  <script src="https://d3js.org/d3-request.v1.min.js"></script>
+  <script src="https://d3js.org/d3-collection.v1.min.js"></script>
+<script src="https://d3js.org/d3-dispatch.v1.min.js"></script>
+<script src="https://d3js.org/d3-dsv.v1.min.js"></script>
+<script src="https://d3js.org/d3-request.v1.min.js"></script>
+  <style>
+
+  @import url('https://fonts.googleapis.com/css?family=Heebo:300');
+  @import url("https://fonts.googleapis.com/css?family=Lato:100");
+  @import url("https://fonts.googleapis.com/css?family=Titillium+Web:700");
+
+  
+  text {
+  font: 10.5px "Heebo", Helvetica, Arial, sans-serif;
+  text-anchor:right;
+  pointer-events: none;
+  text-align:right;
+}
+    .axis text {
+  font: 10px sans-serif;
+  text-align:right;
+}
+
+.svgimg { fill: darkslateblue; }
+
+.axis path, .axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+      circle.dimple-series-1 {
+        fill: red;
+      }
+      h2 {
+        text-align:right;
+        font:20px sans-serif;
+      }
+    </style>
+    <script type="text/javascript">
+
+      function draw(data) {
+        var linspace = function(start, stop, nsteps){
+                       delta = (stop-start)/(nsteps-1)
+                       return d3.range(start, stop+delta, delta).slice(0, nsteps)
+                       }
+      
+      /*
+        D3.js setup code
+      */ 
+          // DIMENSIONS
+          "use strict";
+          var margin = 10,
+              width = 2520-2*margin,
+              height = 920-2*margin,
+              hspace = width*.06
+              vpsace = height*.1,
+              pwidth = width*.2,
+              pheight = pwidth;
+        
+          // MAIN SVG 
+          var svg = d3.select('body')
+                      .append('svg')
+                      .attr('height',height)
+                      .attr('width',width)
+                      .append('g')
+                      .attr('transform','translate('+ 0 +','+ 0+')')
+          
+
+          // Creating groupbies for 'Top 5 Leagues'
+          var groups = d3.nest()
+                         .key(function(d){return d.Statname})
+                         .entries(data)
+          var all_lgs = []
+          for (i=0;i<groups.length;i++){
+            all_lgs= all_lgs.concat(groups[i].values.sort(function(a, b) { return b.Stat - a.Stat; }).slice(0,10))
+          }
+          all_lgs = all_lgs.sort(function(a, b) { return b.Stat - a.Stat; })
+        
+          // LABELS
+          var leagues = ['La Liga','Premier League', 'Bundesliga','Serie A','Ligue 1','Top 5 Leagues']
+          var colors =  ['yellow' ,'purple','red','green','grey','black']
+
+          var league_scale = d3.scale.ordinal()
+                               .domain(leagues)
+                               .rangePoints([width*.02, width*.53])
+          var stats = ['Goals','Assists','Ch. Created']
+
+          var stat_scale = d3.scale.ordinal()
+                                   .domain(stats)
+                                   .rangePoints([height*.1,height*.53])
+
+          var league_sym_scale = d3.scale.ordinal()
+                                         .domain(leagues)
+                                         .range([110,110,140,80,120])
+          var league_color = d3.scale.ordinal()
+                                     .domain(leagues)
+                                     .range(colors)
+
+          // BACKGROUND IMAGE 
+          /*
+           svg.append("g")
+             .append('svg:image')
+             .attr('x',0)
+             .attr('y',0)
+             .attr('width', '100%')
+             .attr('height','100%')
+             .attr("xlink:href",'https://www.nov.com/uploadedImages/Content/Segments/Completion_and_Production_Solutions/02_Custom/QT_Map/ISE_ServiceCenterSearchMapPrint.png' )
+             */
+          
+          var bar_space = 15
+          svg.append('g')
+             .selectAll('text')
+             .data(data.concat(all_lgs))
+             .enter()
+             .append('text')
+             .text(function(d,i){
+              if (i > 149){var dat=all_lgs
+              dat=dat.filter(function(e){return (e.Statname == d.Statname)})}
+              else{
+              var dat = data.filter(function(e){return (e.League == d.League & e.Statname == d.Statname)})
+              }
+            dat=dat.sort(function(a, b) { return b.Stat - a.Stat; })
+           
+            var pos_scale = d3.scale.ordinal()
+                                        .domain(d3.map(dat,function(d){return d.Stat}).keys())
+                                        .range([1,2,3,4,5,6,7,8,9,10])
+
+              return  pos_scale(d.Stat)
+             })
+             .style('fill-opacity',function(d,i){
+              if (i > 149){var dat=all_lgs
+              dat=dat.filter(function(e){return (e.Statname == d.Statname)})}
+              else{
+              var dat = data.filter(function(e){return (e.League == d.League & e.Statname == d.Statname)})}
+              //debugger;
+              if (i%10==0){return 1}
+              else{
+                if (dat[i%10-1].Stat == dat[i%10].Stat){return 0}
+                else{return 1}
+             }})
+              .attr('x', function(d,i) { 
+              if (i>149){
+                return league_scale('Top 5 Leagues')-25
+              }
+              else{
+              return league_scale(d.League)-25}})
+              .attr('y',function(d,i) { return stat_scale(d.Statname) + (i%10)*bar_space-1 })
+              .style('font-weight','bold')
+             // .attr('y', function(d,i) { return stat_scale(d.Statname) + (i%10)*bar_space -10})
+
+          var bar_space = 15
+          svg.append('g')
+             .selectAll('text')
+             .data(all_lgs)
+             .enter()
+             .append('text')
+             .attr('x',league_scale('Top 5 Leagues'))
+             .attr('y', function(d,i) { return stat_scale(d.Statname) + (i%10)*bar_space -1})
+             .text(function(d){return d.Name})
+
+          var word_margin = 80
+          var bar_space = 15
+          var stats_space = 15
+          var rate_space = stats_space+20
+          var shade_width = width*.091
+          var shade_height = height*.6
+
+          var nested = d3.nest()
+                         .key(function(d){return d.League})
+                         .entries(data)
+
+          
+          var league_names = nested.map(function(d,i){return d.key})
+
+
+          // TITLE 
+          /*
+          svg.append('g')
+             .append('text')
+             .attr('x',width*.3)
+             .attr('y',height*.05)
+             .text('Goals, Assists, Chances Created')
+             .style('font','50px Titillium Web')
+             */
+
+          svg.append('g')
+             .append('clipPath')
+             .attr('id','clip')
+             .append('rect')
+              .attr('x',function(d,i){return league_scale(league_names[0]) + 40})
+             .attr('y',7)
+             .attr('width',30)
+             .attr('height',30)
+
+           var league_symbols = ['https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/LaLiga_%28small%29.svg/2000px-LaLiga_%28small%29.svg.png',
+                                'https://vignette2.wikia.nocookie.net/logopedia/images/6/69/Premier_League_Vertical_2016.svg/revision/latest?cb=20170806072717x',
+                                'https://www.dfl-digital-sports.de/wp-content/uploads/2017/07/bl_logo_hor_RGB_pos.png',
+                                'https://www.dafont.com/forum/attach/orig/4/4/445928.png?1',
+                                'http://www.thesportsdb.com/images/media/league/logo/wvryqu1422054726.png']
+   
+
+          // LEAGUE SYMBOLS
+          /*
+          svg.select('g')
+             .selectAll('image')
+             .data(league_symbols)
+             .enter()
+             .append("svg:image")
+             .attr('class','svgimg')
+             .attr('x',function(d,i){return league_scale(league_names[i]) + 40})
+             .attr('y',7)
+             //.attr('clip-path','url(#clip)')   
+             .attr('width', function(d,i){return league_sym_scale(league_names[i])})
+             .attr('height',function(d,i){return league_sym_scale(league_names[i])})
+             .attr("xlink:href",function(d,i){return league_symbols[i]}) 
+             */
+        
+             // LEAGUE NAMES 
+             svg.append('g')
+              .selectAll('text')
+              .data(leagues)
+              .enter()
+              .append('text')
+              .attr('x',function(d,i){return league_scale(leagues[i])+120 - 18*leagues[i].length/2  })
+              .attr('y',height*.04)
+              .text(function(d,i){return leagues[i].toUpperCase()})
+              .style('font','25px Titillium Web')
+              .style('text-anchor','left')
+              .style('fill',function(d,i){return league_color(leagues[i])})
+              .style('fill-opacity',.5)
+
+             
+                
+             // RECTANGLES 
+             svg.append('g')
+             .selectAll('rect')
+             .data(data.concat(all_lgs))
+             .enter()
+             .append('rect')
+             .attr('x', function(d,i) { 
+              if (i>149){
+                return league_scale('Top 5 Leagues')-31
+              }
+              return league_scale(d.League)-31})
+             .attr('y',function(d,i) { return stat_scale(d.Statname) + (i%10)*bar_space -12})
+             .attr('height', bar_space)
+             .attr('width',shade_width)
+             .style('fill',function(d){return league_color(d.League)})
+             .style('fill-opacity',function(d,i){ 
+               if (i>149){return .1}
+              var dat = data.filter(function(e){return (e.League == d.League & e.Statname == d.Statname)})
+               var color_scale = d3.scale.ordinal()
+                                        .domain(d3.map(dat,function(d){return d.Stat}).keys())
+                                        .range([.1,0])
+                return color_scale(d.Stat.toString())})
+                                 // if(i%2==0||i>149) {return .1}d3 fi
+                                 // else       {return 0}}) 
+          // TOTAL BOX 
+          /*
+           svg.append('g')
+             .selectAll('rect')
+             .data(league_names)
+             .enter()
+             .append('rect')
+             .attr('x',function(d,i){return league_scale(league_names[i])-20})
+             .attr('y',160)
+             .attr('width',function(d){return shade_width })
+             .attr('height',function(d) {return shade_height})
+             .style('fill','grey')
+             .style('fill-opacity',.3)
+          */
+
+          svg.append('g')
+             .selectAll('text')
+             .data(data)
+             .enter()
+             .append('text')
+             .attr('x', function(d) { return league_scale(d.League)})
+             .attr('y', function(d,i) { return stat_scale(d.Statname) + (i%10)*bar_space - 1})
+             .text(function(d) {return d.Name })
+
+
+          /*
+          svg.append('g')
+             .append('text')
+             .attr('x',width/2.8)
+             .attr('y',height*.07)
+             .text('LEAGUE LEADERS')
+             .style('font', '50px Lato')*/
+
+
+
+          svg.append('g')
+             .selectAll('text')
+             .data(data.concat(all_lgs))
+             .enter()
+             .append('text')
+             .attr('x', function(d,i) { 
+                        if (i>149){
+                return league_scale('Top 5 Leagues')+margin+hspace+stats_space}
+              else{
+                return league_scale(d.League)+margin+hspace+stats_space
+                  }})
+             .attr('y', function(d,i) { return stat_scale(d.Statname) + (i%10)*bar_space})
+             .text(function(d) {return d.Stat})
+
+          svg.append('g')
+             .selectAll('text')
+             .data(data.concat(all_lgs))
+             .enter()
+             .append('text')
+             .attr('x',function(d,i){if (i>149){
+                return league_scale('Top 5 Leagues')+hspace
+              }
+              return league_scale(d.League)+hspace})
+             .attr('y',function(d,i) {return stat_scale(d.Statname) + (i%10)*bar_space})
+             .text(function(d){return d.GP})
+          var long_word = d3.max(data,function(d){return d.Name.length})
+          /*
+          var format_num = d3.format('.02f')
+          svg.append("g")
+             .selectAll('text')
+             .data(data)
+             .enter()
+             .append('text')
+              .attr('x',function(d) {return league_scale(d.League)+margin+hspace+rate_space})
+             .attr('y',function(d,i) {return stat_scale(d.Statname) + (i%10)*bar_space})
+             .text(function(d) {return format_num(d.Stat/d.GP)})
+          */
+
+          //SYMBOLS
+          svg.append('g')
+          .selectAll('image')
+          .data(data.concat(all_lgs))
+          .enter()
+          .append("svg:image")
+          .attr('x', function(d,i) { 
+              if (i>149){
+                return league_scale('Top 5 Leagues')-15
+              }
+              else{
+            return league_scale(d.League)-15}})
+          .attr('y',function(d,i) { return stat_scale(d.Statname) + (i%10)*bar_space -10})
+          .attr('width', 10)
+          .attr('height', 10)
+          .attr("xlink:href",function(d){return d.CREST})
+          
+          var arrow_scale = d3.scale.ordinal()
+                                    .domain(stats)
+                                    .range([423,423,423])
+          
+           svg.append('g')
+          .selectAll('image')
+          .data(stats)
+          .enter()
+          .append("svg:image")
+          .attr('x',width*.59)
+               .attr('y',function(d,i){if (i==2){return stat_scale(stats[i])-75 } 
+                     else{return stat_scale(stats[i])-75}})
+          .attr('width', function(d,i){return arrow_scale(d)})
+          .attr('height', function(d,i){
+             if (i==2){return 300}
+             else{return 300}
+           })
+          .attr("xlink:href",function(d){return 'http://www.clker.com/cliparts/c/z/7/5/t/n/block-arrow.svg'})
+           .style('opacity',.1)
+           .attr('preserveAspectRatio','none')
+          
+          svg.append('g')
+             .selectAll('text')
+             .data(data.concat(all_lgs))
+             .enter()
+             .append('text')
+             .attr('x', function(d,i) { 
+               if (i>149){
+                return league_scale('Top 5 Leagues')
+              }
+              else{
+              return league_scale(d.League)}}
+             )
+             .attr('y', function(d) { return stat_scale(d.Statname)-18})
+             .text(function(d,i) {
+              var Statname = null
+              if (d.Statname == 'Ch. Created'){
+                 Statname = 'Ch Cr.'
+              }
+              else{
+                Statname = d.Statname
+              }
+              if(Statname == 'Assists'){var space = 2}
+              else{var space = 3}
+              if ((i%10) == 0){return "Name" + '\xa0'.repeat(51) +    'Apps'+'\xa0'.repeat(space)+Statname}
+              else {return ''}
+               })
+             .style('font','9.3px Heebo')
+             .style('font-weight','bold')
+          
+            // SIGNATURE 
+            
+            svg.append('g')
+               .append('text')
+               .attr('x',width*.118)
+               .attr('y',height*.741)
+               .text('  | League play only |  Data from BeIN Sports Network   |    @FootyNumb3rs ')
+               .style('font','15px Heebo')
+               .style('fill-opacity',.4)
+               .style('font-weight','bold')
+            
+            svg.append('g')
+               .append('text')
+               .attr('x',width*.019)
+               .attr('y',height*.741)
+               .text('Last Update: 11/7/2017 1:30PM EST')
+               .style('font','15px Heebo')
+               .style('fill-opacity',.5)
+               .style('font-weight','bold')
+               .style('fill','red')
+            
+            var temp_scale = d3.scale.ordinal()
+                                     .domain(['Goals','Assists'])
+                                     .rangePoints([width*.653,width*.645])
+            
+            svg.append('g')
+               .selectAll('text')
+               .data(stats.slice(0,2))
+               .enter()
+               .append('text')
+               .attr('x',function(d){return temp_scale(d)})
+               .attr('y',function(d,i) {return stat_scale(stats[i])+81})
+               .text(function(d){return d.toUpperCase()})
+               .style('font','40px Titillium Web')
+               .style('fill-opacity',.3)
+            
+            svg.append('g')
+               .append('text')
+               .attr('x',width*.643)
+               .attr('y',function(d,i) {return height*.59})
+               .text('Chances'.toUpperCase())
+               .style('font','40px Titillium Web')
+               .style('fill-opacity',.3)
+            
+            svg.append('g')
+               .append('text')
+               .attr('x',width*.643)
+               .attr('y',function(d,i) {return height*.643})
+               .text('Created'.toUpperCase())
+               .style('font','40px Titillium Web')
+               .style('fill-opacity',.3)
+            
+            
+            svg.append('g')
+               .append('rect')
+               .attr('x',width*.0143)
+               .attr('y',height*.72)
+               .attr('height',30)
+               .attr('width',725)
+               .style('fill-opacity',.045)
+            
+            
+
+             /*
+             .selectAll('rect')
+             .data(data)
+             .enter()
+             .append('rect')
+             .attr('class','bar')
+             .attr('x', function(d) { return league_scale(d.League) + word_margin})
+             .attr('y', function(d,i) { return stat_scale(d.Statname) + i*bar_space})
+             .attr('height',20)
+             .attr('width',function(d) {return +d.Stat*10})
+             .attr('fill','blue')
+             */
+
+
+        };
+      </script>
+  </head>
+<body>
+  <script type="text/javascript">
+  /*
+    Use D3 (not dimple.js) to load the TSV file
+    and pass the contents of it to the draw function
+    */
+
+// format - d3.time.
+
+  // Parsing date before input passed to draw function  
+  format = d3.time.format("%d-%m-%Y (%H:%M h)");
+  d3.csv("super_table5.csv",draw);
+  </script>
+</body>
+</html>
